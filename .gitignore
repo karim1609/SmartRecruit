@@ -40,9 +40,7 @@ pnpm-debug.log*
 # ==============================
 # Databases / Persistent data
 # ==============================
-*.db
-*.sqlite
-*.sqlite3
+
 data/
 mongodb_data/
 redis_data/
