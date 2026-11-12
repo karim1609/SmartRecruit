@@ -19,12 +19,12 @@ class UserCreate(BaseModel):
 class UserInDB(BaseModel):
     email: EmailStr
     hashed_password: str
+    full_name: str
     role: UserRole
     is_active: bool = True
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
-
 
 # Data returned to the frontend
 class UserResponse(BaseModel):

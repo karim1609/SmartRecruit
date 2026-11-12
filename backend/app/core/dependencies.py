@@ -1,27 +1,31 @@
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
 from bson import ObjectId
 from bson.errors import InvalidId
+
 import jwt
 
 from app.database.connection import users_collection
 from app.core.security import decode_access_token
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+bearer_scheme = HTTPBearer()
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
-
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired authentication token",
-        headers={"WWW-Authenticate": "Bearer"}
+        headers={"WWW-Authenticate": "Bearer"},
     )
 
     try:
-        payload = decode_access_token(token)
+        payload = decode_access_token(credentials.credentials)
+
         user_id = payload.get("sub")
 
         if not user_id:
@@ -37,11 +41,13 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         return {
             "id": str(user["_id"]),
             "email": user["email"],
-            "role": user["role"]
+            "role": user["role"],
         }
 
-    except (jwt.InvalidTokenError, InvalidId, TypeError):
+    except (jwt.InvalidTokenError, InvalidId, TypeError, ValueError):
         raise credentials_exception
+
+
 def require_role(*allowed_roles: str):
 
     def role_checker(
@@ -50,7 +56,7 @@ def require_role(*allowed_roles: str):
         if current_user["role"] not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to access this resource"
+                detail="You don't have permission to access this resource",
             )
 
         return current_user
