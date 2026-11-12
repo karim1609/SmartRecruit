@@ -8,7 +8,7 @@ from pwdlib import PasswordHash
 
 password_hash = PasswordHash.recommended()
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "project_oumaima_karim")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
