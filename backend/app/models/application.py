@@ -19,8 +19,12 @@ class ApplicationBase(BaseModel):
     cover_letter: str | None = None
 
 
-class ApplicationCreate(ApplicationBase):
-    pass
+class ApplicationCreate(BaseModel):
+    """Fields the client sends when applying for a job.
+    candidate_id is derived server-side from the JWT token.
+    """
+    job_offer_id: str
+    cover_letter: str | None = None
 
 
 class ApplicationUpdate(BaseModel):

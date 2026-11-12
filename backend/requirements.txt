@@ -12,12 +12,11 @@ qdrant-client
 redis
 neo4j
 
-PyMuPDF
-
-sentence-transformers
-torch
-numpy
-scikit-learn
+# PyMuPDF           # Uncomment when CV extraction is implemented
+# sentence-transformers  # Uncomment when AI matching is implemented
+# torch              # Install CPU-only: pip install torch --index-url https://download.pytorch.org/whl/cpu
+# numpy              # Uncomment when AI matching/CV parsing is implemented
+# scikit-learn       # Uncomment when AI matching is implemented
 
 python-multipart
 
