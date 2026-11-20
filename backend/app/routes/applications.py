@@ -1,4 +1,7 @@
 
+import os
+import shutil
+import uuid
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -9,8 +12,12 @@ from fastapi import (
     Depends,
     HTTPException,
     Query,
+    Request,
+    UploadFile,
+    File,
     status
 )
+from fastapi.responses import FileResponse
 
 from app.database.connection import (
     applications_collection,
@@ -131,6 +138,9 @@ def check_recruiter_permission(
     )
 
 
+APP_CV_UPLOAD_DIR = os.path.join(os.getcwd(), "uploads", "cvs")
+
+
 # =====================================
 # 1. CREATE APPLICATION
 # =====================================
@@ -140,10 +150,44 @@ def check_recruiter_permission(
     response_model=ApplicationResponse,
     status_code=status.HTTP_201_CREATED
 )
-def create_application(
-    data: ApplicationCreate,
+async def create_application(
+    request: Request,
     current_user: dict = Depends(require_role("candidate"))
 ):
+
+    content_type = request.headers.get("content-type", "")
+    job_offer_id: str = ""
+    cover_letter: str | None = None
+    cv_option: str = "profile"
+    uploaded_file: UploadFile | None = None
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        job_offer_id = str(form.get("job_offer_id") or "")
+        cover_val = form.get("cover_letter")
+        if cover_val:
+            cover_letter = str(cover_val)
+        cv_option = str(form.get("cv_option") or "profile")
+        file_val = form.get("cv_file")
+        if file_val and hasattr(file_val, "filename") and file_val.filename:
+            uploaded_file = file_val
+    else:
+        try:
+            body = await request.json()
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid request body"
+            )
+        job_offer_id = str(body.get("job_offer_id") or "")
+        cover_letter = body.get("cover_letter")
+        cv_option = str(body.get("cv_option") or "profile")
+
+    if not job_offer_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Job offer ID is required"
+        )
 
     # Find candidate profile
     candidate = candidates_collection.find_one({
@@ -157,7 +201,7 @@ def create_application(
         )
 
     # Find job offer
-    job = get_job_offer(data.job_offer_id)
+    job = get_job_offer(job_offer_id)
 
     # Only open offers accept applications
     if job["status"] != "open":
@@ -171,7 +215,7 @@ def create_application(
     # Check for an existing application
     existing_application = applications_collection.find_one({
         "candidate_id": candidate_id,
-        "job_offer_id": data.job_offer_id
+        "job_offer_id": job_offer_id
     })
 
     if existing_application:
@@ -180,39 +224,121 @@ def create_application(
             detail="You have already applied for this job"
         )
 
+    # Handle CV selection
+    cv_filename: str | None = None
+    cv_path: str | None = None
+
+    if cv_option == "custom":
+        if not uploaded_file or not uploaded_file.filename:
+            raise HTTPException(
+                status_code=400,
+                detail="Custom CV file is required when choosing custom CV option"
+            )
+
+        allowed_exts = {".pdf", ".doc", ".docx", ".txt", ".rtf"}
+        ext = os.path.splitext(uploaded_file.filename)[1].lower()
+        if ext not in allowed_exts:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid file format. Allowed: PDF, DOC, DOCX, TXT, RTF"
+            )
+
+        os.makedirs(APP_CV_UPLOAD_DIR, exist_ok=True)
+        file_id = uuid.uuid4().hex
+        safe_filename = "".join(c for c in uploaded_file.filename if c.isalnum() or c in "._- ")
+        saved_name = f"app_{job_offer_id}_{candidate_id}_{file_id}_{safe_filename}"
+        saved_path = os.path.join(APP_CV_UPLOAD_DIR, saved_name)
+
+        with open(saved_path, "wb") as buffer:
+            shutil.copyfileobj(uploaded_file.file, buffer)
+
+        cv_filename = uploaded_file.filename
+        cv_path = saved_path
+    elif cv_option == "profile":
+        if not candidate.get("cv_path") or not os.path.exists(candidate["cv_path"]):
+            raise HTTPException(
+                status_code=400,
+                detail="No CV found in your profile. Please upload a CV to your profile or choose the custom CV option."
+            )
+        cv_filename = candidate.get("cv_filename")
+        cv_path = candidate.get("cv_path")
+
     now = datetime.now(timezone.utc)
 
     application_document = {
         "candidate_id": candidate_id,
-        "job_offer_id": data.job_offer_id,
-        "cover_letter": data.cover_letter,
+        "job_offer_id": job_offer_id,
+        "cover_letter": cover_letter,
+        "cv_filename": cv_filename,
+        "cv_path": cv_path,
         "status": "pending",
         "applied_at": now,
         "updated_at": now
     }
 
     try:
-
         result = applications_collection.insert_one(
             application_document
         )
-
     except Exception as error:
-
-        # Protect against duplicate submissions
         from pymongo.errors import DuplicateKeyError
-
         if isinstance(error, DuplicateKeyError):
             raise HTTPException(
                 status_code=409,
                 detail="You have already applied for this job"
             )
-
         raise
 
     application_document["id"] = str(result.inserted_id)
 
     return application_document
+
+
+# =====================================
+# DOWNLOAD APPLICATION CV
+# =====================================
+
+@router.get("/{application_id}/cv")
+def get_application_cv(
+    application_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    application = get_application_or_404(application_id)
+
+    # Candidate can view only their own application CV
+    if current_user["role"] == "candidate":
+        candidate = candidates_collection.find_one({
+            "user_id": current_user["id"]
+        })
+        if not candidate or application["candidate_id"] != str(candidate["_id"]):
+            raise HTTPException(
+                status_code=403,
+                detail="You cannot access this CV"
+            )
+    elif current_user["role"] == "recruiter":
+        job = get_job_offer(application["job_offer_id"])
+        check_recruiter_permission(job, current_user)
+    elif current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied"
+        )
+
+    cv_path = application.get("cv_path")
+    cv_filename = application.get("cv_filename", "resume.pdf")
+
+    if not cv_path or not os.path.exists(cv_path):
+        raise HTTPException(
+            status_code=404,
+            detail="CV file not found for this application"
+        )
+
+    media_type = "application/pdf" if cv_filename.lower().endswith(".pdf") else "application/octet-stream"
+    return FileResponse(
+        path=cv_path,
+        filename=cv_filename,
+        media_type=media_type
+    )
 
 
 # =====================================

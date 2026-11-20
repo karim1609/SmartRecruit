@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { getMyApplications, withdrawApplication, updateApplication } from '../../api/applications'
+import { getMyApplications, withdrawApplication, updateApplication, downloadApplicationCV } from '../../api/applications'
 import Loading from '../../components/common/Loading'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import StatusBadge from '../../components/common/StatusBadge'
 import Modal from '../../components/common/Modal'
 import toast from 'react-hot-toast'
-import { FileText, Trash2, Edit2 } from 'lucide-react'
+import { FileText, Trash2, Edit2, Download } from 'lucide-react'
+import { downloadBlob } from '../../utils/download'
 
 export default function MyApplications() {
   const [apps, setApps] = useState([])
@@ -14,6 +15,7 @@ export default function MyApplications() {
   const [editModal, setEditModal] = useState(null)
   const [coverLetter, setCoverLetter] = useState('')
   const [saving, setSaving] = useState(false)
+  const [downloadingId, setDownloadingId] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -55,6 +57,19 @@ export default function MyApplications() {
     }
   }
 
+  const handleDownloadCV = async (app) => {
+    setDownloadingId(app.id)
+    try {
+      const res = await downloadApplicationCV(app.id)
+      downloadBlob(res.data, app.cv_filename || `application_${app.id.slice(-6)}_cv.pdf`)
+      toast.success('CV downloaded.')
+    } catch {
+      toast.error('Failed to download CV file.')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
   if (loading) return <Loading />
   if (error) return <ErrorMessage message={error} onRetry={load} />
 
@@ -62,7 +77,7 @@ export default function MyApplications() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800">My Applications</h1>
-        <p className="text-slate-500 text-sm mt-1">Track and manage your job applications.</p>
+        <p className="text-slate-500 text-sm mt-1">Track and manage your submitted applications and attached CVs.</p>
       </div>
 
       {apps.length === 0 ? (
@@ -77,6 +92,7 @@ export default function MyApplications() {
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Job ID</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Attached CV</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Applied</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Actions</th>
               </tr>
@@ -86,6 +102,22 @@ export default function MyApplications() {
                 <tr key={app.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">{app.job_offer_id?.slice(-12)}</td>
                   <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
+                  <td className="px-4 py-3">
+                    {app.cv_filename ? (
+                      <button
+                        onClick={() => handleDownloadCV(app)}
+                        disabled={downloadingId === app.id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                        title="Download attached CV"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                        <span className="max-w-[140px] truncate">{app.cv_filename}</span>
+                        <Download className="w-3 h-3 text-indigo-500 ml-0.5" />
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">None</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-slate-500 text-xs">
                     {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : '—'}
                   </td>
@@ -136,4 +168,3 @@ export default function MyApplications() {
     </div>
   )
 }
-

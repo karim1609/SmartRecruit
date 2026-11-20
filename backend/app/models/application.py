@@ -17,6 +17,8 @@ class ApplicationBase(BaseModel):
     candidate_id: str
     job_offer_id: str
     cover_letter: str | None = None
+    cv_filename: str | None = None
+    cv_path: str | None = None
 
 
 class ApplicationCreate(BaseModel):
@@ -25,6 +27,7 @@ class ApplicationCreate(BaseModel):
     """
     job_offer_id: str
     cover_letter: str | None = None
+    cv_option: str | None = "profile"
 
 
 class ApplicationUpdate(BaseModel):
