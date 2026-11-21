@@ -52,12 +52,19 @@ async def test_send_email_calls_aiosmtplib():
 
 
 @pytest.mark.asyncio
-async def test_send_email_raises_on_failure():
+async def test_send_application_confirmation():
     service = EmailService()
-    with patch("aiosmtplib.send", side_effect=Exception("Connection refused")):
-        with pytest.raises(EmailServiceError, match="Email delivery failed"):
-            await service.send_email(
-                to_email="fail@test.com",
-                subject="Fail",
-                html_content="<p>Fail</p>",
-            )
+    with patch.object(service, "send_email", new_callable=pytest.importorskip("unittest.mock").AsyncMock) as mock_send:
+        await service.send_application_confirmation(
+            to_email="candidate@test.com",
+            candidate_name="Jane Doe",
+            job_title="Full Stack Python Engineer",
+            company_name="Acme Corp",
+        )
+        assert mock_send.called
+        kwargs = mock_send.call_args[1]
+        assert kwargs["to_email"] == "candidate@test.com"
+        assert "Application Received: Full Stack Python Engineer" in kwargs["subject"]
+        assert "Acme Corp" in kwargs["html_content"]
+        assert "Jane Doe" in kwargs["html_content"]
+

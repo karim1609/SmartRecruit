@@ -9,6 +9,7 @@ from bson.errors import InvalidId
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     HTTPException,
     Query,
@@ -23,13 +24,16 @@ from app.database.connection import (
     applications_collection,
     candidates_collection,
     job_offers_collection,
-    company_members_collection
+    company_members_collection,
+    companies_collection,
+    users_collection,
 )
 
 from app.core.dependencies import (
     get_current_user,
     require_role
 )
+from app.services.email_service import email_service
 
 from app.models.application import (
     ApplicationCreate,
@@ -152,6 +156,7 @@ APP_CV_UPLOAD_DIR = os.path.join(os.getcwd(), "uploads", "cvs")
 )
 async def create_application(
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(require_role("candidate"))
 ):
 
@@ -290,6 +295,34 @@ async def create_application(
         raise
 
     application_document["id"] = str(result.inserted_id)
+
+    # Dispatch application confirmation email asynchronously in background
+    try:
+        candidate_email = current_user.get("email")
+        candidate_name = candidate.get("full_name") or current_user.get("full_name") or "Candidate"
+        job_title = job.get("title", "Position")
+
+        # Retrieve company name
+        company_name = "SmartRecruit Partner"
+        if job.get("company_id"):
+            try:
+                comp = companies_collection.find_one({"_id": ObjectId(job["company_id"])})
+                if comp and comp.get("name"):
+                    company_name = comp["name"]
+            except Exception:
+                pass
+
+        if candidate_email:
+            background_tasks.add_task(
+                email_service.send_application_confirmation,
+                to_email=candidate_email,
+                candidate_name=candidate_name,
+                job_title=job_title,
+                company_name=company_name,
+            )
+    except Exception as exc:
+        # Never fail application creation if email task scheduling encounters an issue
+        pass
 
     return application_document
 

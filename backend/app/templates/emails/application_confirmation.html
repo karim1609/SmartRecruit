@@ -1,0 +1,74 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Application Received - {{ job_title }}{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .job-card {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 20px 24px;
+        margin: 24px 0;
+    }
+    .job-title {
+        color: #1e3a8a;
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0 0 6px 0;
+    }
+    .job-company {
+        color: #4b5563;
+        font-size: 14px;
+        font-weight: 500;
+        margin: 0;
+    }
+    .status-badge {
+        display: inline-block;
+        background-color: #dbeafe;
+        color: #1e40af;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        margin-top: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 style="color: #111827; font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 12px;">
+    Application Successfully Received!
+</h2>
+
+<p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin-bottom: 16px;">
+    Hello <strong>{{ candidate_name }}</strong>,
+</p>
+
+<p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin-bottom: 20px;">
+    We are pleased to confirm that your job application has been successfully submitted through <strong>SmartRecruit</strong>.
+</p>
+
+<div class="job-card">
+    <div class="job-title">{{ job_title }}</div>
+    <div class="job-company">Company: <strong>{{ company_name }}</strong></div>
+    <div class="status-badge">Status: Received / Under Review</div>
+</div>
+
+<p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+    <strong>What happens next?</strong><br />
+    Our hiring team and recruiters are reviewing your profile, qualifications, and submitted documents. If your profile matches our requirements, we will contact you directly to schedule an interview or discuss the next steps.
+</p>
+
+<p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+    You can track the progress of this application at any time by logging into your candidate dashboard under <strong>"My Applications"</strong>.
+</p>
+
+<div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px;">
+    <p style="margin: 0; color: #166534; font-size: 13px; line-height: 1.4;">
+        ✓ Submitted on {{ applied_at }}
+    </p>
+</div>
+{% endblock %}

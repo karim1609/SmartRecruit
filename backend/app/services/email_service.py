@@ -118,6 +118,39 @@ class EmailService:
             text_content=f"Hello {full_name},\nYour SmartRecruit verification code is: {code}\nThis code expires in {expire_minutes} minutes.",
         )
 
+    async def send_application_confirmation(
+        self,
+        to_email: str,
+        candidate_name: str,
+        job_title: str,
+        company_name: str,
+    ) -> None:
+        """Send job application confirmation email to candidate."""
+        applied_at = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
+        html = self.render_template(
+            "emails/application_confirmation.html",
+            {
+                "candidate_name": candidate_name,
+                "job_title": job_title,
+                "company_name": company_name,
+                "applied_at": applied_at,
+            },
+        )
+        plain_text = (
+            f"Hello {candidate_name},\n\n"
+            f"We have received your application for '{job_title}' at '{company_name}'.\n"
+            f"Our recruitment team is reviewing your profile and will contact you regarding next steps.\n"
+            f"You can track the progress of your application in your candidate dashboard.\n\n"
+            f"Submitted on: {applied_at}\n\n"
+            f"Best regards,\nSmartRecruit Team"
+        )
+        await self.send_email(
+            to_email=to_email,
+            subject=f"[{settings.APP_NAME}] Application Received: {job_title}",
+            html_content=html,
+            text_content=plain_text,
+        )
+
 
 # Singleton instance
 email_service = EmailService()
