@@ -15,6 +15,16 @@ logger = logging.getLogger(__name__)
 # Base templates directory path
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
 
+# Load base64 logo if present
+LOGO_BASE64 = ""
+LOGO_PATH = os.path.join(TEMPLATES_DIR, "assets", "logo_base64.txt")
+if os.path.exists(LOGO_PATH):
+    try:
+        with open(LOGO_PATH, "r") as f:
+            LOGO_BASE64 = f.read().strip()
+    except Exception as exc:
+        logger.warning("Could not read logo_base64.txt: %s", exc)
+
 
 class EmailServiceError(Exception):
     """Base exception for email service errors."""
@@ -36,6 +46,7 @@ class EmailService:
         template_context = dict(context)
         template_context.setdefault("current_year", datetime.now(timezone.utc).year)
         template_context.setdefault("app_name", settings.APP_NAME)
+        template_context.setdefault("logo_base64", LOGO_BASE64)
         template = self.jinja_env.get_template(template_name)
         return template.render(**template_context)
 

@@ -3,9 +3,11 @@ import { getMyApplications, withdrawApplication, updateApplication, downloadAppl
 import Loading from '../../components/common/Loading'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import StatusBadge from '../../components/common/StatusBadge'
+import ApplicationTimeline from '../../components/common/ApplicationTimeline'
+import CVPreviewModal from '../../components/common/CVPreviewModal'
 import Modal from '../../components/common/Modal'
 import toast from 'react-hot-toast'
-import { FileText, Trash2, Edit2, Download } from 'lucide-react'
+import { FileText, Trash2, Edit2, Download, Eye, ChevronDown, ChevronUp } from 'lucide-react'
 import { downloadBlob } from '../../utils/download'
 
 export default function MyApplications() {
@@ -16,6 +18,8 @@ export default function MyApplications() {
   const [coverLetter, setCoverLetter] = useState('')
   const [saving, setSaving] = useState(false)
   const [downloadingId, setDownloadingId] = useState(null)
+  const [previewApp, setPreviewApp] = useState(null)
+  const [expandedId, setExpandedId] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -23,6 +27,9 @@ export default function MyApplications() {
     try {
       const res = await getMyApplications(0, 50)
       setApps(res.data)
+      if (res.data?.length > 0) {
+        setExpandedId(res.data[0].id) // expand first by default
+      }
     } catch {
       setError('Failed to load applications.')
     } finally {
@@ -74,80 +81,117 @@ export default function MyApplications() {
   if (error) return <ErrorMessage message={error} onRetry={load} />
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">My Applications</h1>
-        <p className="text-slate-500 text-sm mt-1">Track and manage your submitted applications and attached CVs.</p>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">My Applications</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Track real-time hiring progress, view attached CVs, and manage your submissions.
+          </p>
+        </div>
       </div>
 
       {apps.length === 0 ? (
-        <div className="text-center py-16 text-slate-400">
-          <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
-          <p>No applications yet. Start by browsing jobs!</p>
+        <div className="card text-center py-16 px-4">
+          <FileText className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+          <h3 className="text-sm font-bold text-slate-800">No applications submitted yet</h3>
+          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+            Discover opportunities matching your skills and experience on the job board.
+          </p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Job ID</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Attached CV</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Applied</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {apps.map(app => (
-                <tr key={app.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-600">{app.job_offer_id?.slice(-12)}</td>
-                  <td className="px-4 py-3"><StatusBadge status={app.status} /></td>
-                  <td className="px-4 py-3">
-                    {app.cv_filename ? (
-                      <button
-                        onClick={() => handleDownloadCV(app)}
-                        disabled={downloadingId === app.id}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
-                        title="Download attached CV"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-indigo-600" />
-                        <span className="max-w-[140px] truncate">{app.cv_filename}</span>
-                        <Download className="w-3 h-3 text-indigo-500 ml-0.5" />
-                      </button>
-                    ) : (
-                      <span className="text-xs text-slate-400 italic">None</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs">
-                    {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {app.status === 'pending' && (
-                        <button
-                          onClick={() => { setEditModal(app); setCoverLetter(app.cover_letter || '') }}
-                          className="p-1.5 rounded hover:bg-indigo-50 text-indigo-600"
-                          title="Edit cover letter"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleWithdraw(app.id)}
-                        className="p-1.5 rounded hover:bg-red-50 text-red-500"
-                        title="Withdraw"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+        <div className="space-y-4">
+          {apps.map((app) => {
+            const isExpanded = expandedId === app.id
+            return (
+              <div key={app.id} className="card p-5 transition-all duration-200 hover:shadow-md">
+                {/* Application top bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs font-mono">
+                      #{app.job_offer_id?.slice(-4)}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-800">Job Reference: {app.job_offer_id?.slice(-10)}</span>
+                        <StatusBadge status={app.status} />
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Submitted on {app.applied_at ? new Date(app.applied_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2">
+                    {app.cv_filename && (
+                      <button
+                        onClick={() => setPreviewApp(app)}
+                        className="btn-secondary py-1.5 px-3 text-xs gap-1.5"
+                        title="Quick Preview CV"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                        Preview CV
+                      </button>
+                    )}
+
+                    {app.status === 'pending' && (
+                      <button
+                        onClick={() => { setEditModal(app); setCoverLetter(app.cover_letter || '') }}
+                        className="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+                        title="Edit cover letter"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => handleWithdraw(app.id)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      title="Withdraw Application"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : app.id)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                      title={isExpanded ? "Collapse Timeline" : "Expand Timeline"}
+                    >
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stepper Timeline */}
+                {isExpanded && (
+                  <div className="pt-5 mt-2 bg-slate-50/60 rounded-xl p-4 border border-slate-100">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">
+                      Hiring Pipeline Progression
+                    </p>
+                    <ApplicationTimeline
+                      status={app.status}
+                      appliedAt={app.applied_at}
+                      updatedAt={app.updated_at}
+                    />
+
+                    {app.cover_letter && (
+                      <div className="mt-5 pt-4 border-t border-slate-200/80">
+                        <p className="text-xs font-semibold text-slate-600 mb-1">Your Submitted Cover Letter:</p>
+                        <p className="text-xs text-slate-500 bg-white p-3 rounded-lg border border-slate-200/60 whitespace-pre-wrap leading-relaxed">
+                          {app.cover_letter}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
+      {/* Edit Cover Letter Modal */}
       {editModal && (
         <Modal title="Edit Cover Letter" onClose={() => setEditModal(null)}>
           <div className="space-y-4">
@@ -155,15 +199,24 @@ export default function MyApplications() {
               className="input-field min-h-[140px] resize-y"
               value={coverLetter}
               onChange={e => setCoverLetter(e.target.value)}
+              placeholder="Introduce yourself to the hiring manager..."
             />
             <div className="flex justify-end gap-3">
               <button className="btn-secondary" onClick={() => setEditModal(null)}>Cancel</button>
               <button className="btn-primary" onClick={handleEdit} disabled={saving}>
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* In-Browser PDF Preview Modal */}
+      {previewApp && (
+        <CVPreviewModal
+          application={previewApp}
+          onClose={() => setPreviewApp(null)}
+        />
       )}
     </div>
   )

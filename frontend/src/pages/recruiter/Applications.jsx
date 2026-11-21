@@ -4,8 +4,9 @@ import Loading from '../../components/common/Loading'
 import ErrorMessage from '../../components/common/ErrorMessage'
 import StatusBadge from '../../components/common/StatusBadge'
 import Modal from '../../components/common/Modal'
+import CVPreviewModal from '../../components/common/CVPreviewModal'
 import toast from 'react-hot-toast'
-import { FileText, Download } from 'lucide-react'
+import { FileText, Download, Eye } from 'lucide-react'
 import { downloadBlob } from '../../utils/download'
 
 export default function RecruiterApplications() {
@@ -15,6 +16,7 @@ export default function RecruiterApplications() {
   const [selected, setSelected] = useState(null)
   const [updating, setUpdating] = useState(false)
   const [downloadingCV, setDownloadingCV] = useState(false)
+  const [previewApp, setPreviewApp] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -93,10 +95,14 @@ export default function RecruiterApplications() {
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">{app.job_offer_id?.slice(-10)}</td>
                   <td className="px-4 py-3">
                     {app.cv_filename ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded font-mono truncate max-w-[150px]">
-                        <FileText className="w-3 h-3 text-indigo-500 shrink-0" />
+                      <button
+                        onClick={() => setPreviewApp(app)}
+                        className="inline-flex items-center gap-1.5 text-xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg font-mono truncate max-w-[170px] transition-colors"
+                        title="Quick Preview CV"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                         <span className="truncate">{app.cv_filename}</span>
-                      </span>
+                      </button>
                     ) : (
                       <span className="text-xs text-slate-400 italic">None</span>
                     )}
@@ -150,14 +156,23 @@ export default function RecruiterApplications() {
                       {selected.cv_filename}
                     </span>
                   </div>
-                  <button
-                    onClick={() => handleDownloadCV(selected)}
-                    disabled={downloadingCV}
-                    className="btn-primary text-xs flex items-center gap-1.5 py-1.5 px-3 shrink-0"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    {downloadingCV ? 'Downloading...' : 'Download CV'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPreviewApp(selected)}
+                      className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3 shrink-0"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                      Preview CV
+                    </button>
+                    <button
+                      onClick={() => handleDownloadCV(selected)}
+                      disabled={downloadingCV}
+                      className="btn-primary text-xs flex items-center gap-1.5 py-1.5 px-3 shrink-0"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      {downloadingCV ? 'Downloading...' : 'Download'}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-slate-400 italic">No CV attached with this application.</p>
@@ -194,6 +209,14 @@ export default function RecruiterApplications() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* In-Browser PDF CV Preview */}
+      {previewApp && (
+        <CVPreviewModal
+          application={previewApp}
+          onClose={() => setPreviewApp(null)}
+        />
       )}
     </div>
   )
