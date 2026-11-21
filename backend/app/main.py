@@ -9,6 +9,7 @@ from app.database.connection import (
     initialize_database,
     close_mongodb_connection,
 )
+from app.core.redis import get_redis_client, close_redis_client
 
 from app.routes import (
     auth,
@@ -28,10 +29,17 @@ from app.routes import (
 async def lifespan(app: FastAPI):
     # Startup
     initialize_database()
+    # Eagerly initialize Redis connection pool
+    try:
+        get_redis_client().ping()
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Redis ping on startup failed: %s", exc)
     yield
 
     # Shutdown
     close_mongodb_connection()
+    close_redis_client()
 
 
 app = FastAPI(

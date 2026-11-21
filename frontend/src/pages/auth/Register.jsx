@@ -22,9 +22,9 @@ export default function Register() {
       return
     }
     try {
-      await register(form)
-      toast.success('Account created! Please log in.')
-      navigate('/login')
+      const res = await register(form)
+      toast.success(res.message || 'Account created! Please check your email for the verification code.')
+      navigate('/verify-email', { state: { email: form.email } })
     } catch (err) {
       const msg = err.response?.data?.detail || 'Registration failed.'
       setError(msg)

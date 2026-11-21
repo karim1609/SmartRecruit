@@ -24,6 +24,9 @@ python-multipart
 pwdlib[argon2]
 PyJWT[crypto]
 
+aiosmtplib
+jinja2
+
 httpx
 
 pytest

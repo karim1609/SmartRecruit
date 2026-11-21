@@ -21,6 +21,12 @@ export default function Login() {
     } catch (err) {
       const msg = err.response?.data?.detail || 'Login failed. Check your credentials.'
       setError(msg)
+      if (err.response?.status === 403 && msg.toLowerCase().includes('verification')) {
+        toast.error('Email verification required. Redirecting...')
+        setTimeout(() => {
+          navigate('/verify-email', { state: { email: form.email } })
+        }, 1500)
+      }
     }
   }
 

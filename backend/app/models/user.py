@@ -22,6 +22,8 @@ class UserInDB(BaseModel):
     full_name: str
     role: UserRole
     is_active: bool = True
+    is_verified: bool = False
+    email_verified_at: datetime | None = None
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
@@ -30,6 +32,9 @@ class UserInDB(BaseModel):
 class UserResponse(BaseModel):
     id: str
     email: EmailStr
+    full_name: str | None = None
     role: UserRole
     is_active: bool
+    is_verified: bool = False
+    email_verified_at: datetime | None = None
     created_at: datetime

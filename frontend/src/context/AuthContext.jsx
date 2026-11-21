@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { login as loginApi, register as registerApi } from '../api/auth'
+import {
+  login as loginApi,
+  register as registerApi,
+  verifyEmail as verifyEmailApi,
+  resendVerification as resendVerificationApi,
+} from '../api/auth'
 
 const AuthContext = createContext(null)
 
@@ -38,6 +43,27 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const verifyEmail = async (email, code) => {
+    setLoading(true)
+    try {
+      const res = await verifyEmailApi({ email, code })
+      const { access_token, user: userData } = res.data
+      if (access_token && userData) {
+        localStorage.setItem('access_token', access_token)
+        localStorage.setItem('user', JSON.stringify(userData))
+        setUser(userData)
+      }
+      return res.data
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resendVerification = async (email) => {
+    const res = await resendVerificationApi({ email })
+    return res.data
+  }
+
   const logout = () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('user')
@@ -45,7 +71,17 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        verifyEmail,
+        resendVerification,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

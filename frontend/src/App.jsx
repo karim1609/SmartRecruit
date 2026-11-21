@@ -10,6 +10,7 @@ import DashboardLayout from './layouts/DashboardLayout'
 // Auth pages
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import VerifyEmail from './pages/auth/VerifyEmail'
 
 // Candidate pages
 import CandidateDashboard from './pages/candidate/CandidateDashboard'
@@ -50,6 +51,7 @@ export default function App() {
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
           </Route>
 
           {/* Candidate routes */}

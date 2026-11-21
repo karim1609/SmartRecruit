@@ -10,6 +10,29 @@ from app.services.document_extraction_service import (
     DocumentConversionError,
     FileSizeExceededError,
 )
+from app.services.email_service import (
+    EmailService,
+    EmailServiceError,
+    email_service,
+)
+from app.services.verification_service import (
+    VerificationService,
+    VerificationError,
+    CooldownActiveError,
+    InvalidCodeError,
+    MaxAttemptsExceededError,
+    CodeExpiredOrNotFoundError,
+    verification_service,
+)
+from app.services.auth_service import (
+    AuthService,
+    AuthServiceError,
+    EmailAlreadyExistsError,
+    InvalidCredentialsError,
+    AccountDisabledError,
+    EmailVerificationRequiredError,
+    auth_service,
+)
 
 __all__ = [
     "DocumentExtractionService",
@@ -22,4 +45,22 @@ __all__ = [
     "LibreOfficeNotFoundError",
     "DocumentConversionError",
     "FileSizeExceededError",
+    "EmailService",
+    "EmailServiceError",
+    "email_service",
+    "VerificationService",
+    "VerificationError",
+    "CooldownActiveError",
+    "InvalidCodeError",
+    "MaxAttemptsExceededError",
+    "CodeExpiredOrNotFoundError",
+    "verification_service",
+    "AuthService",
+    "AuthServiceError",
+    "EmailAlreadyExistsError",
+    "InvalidCredentialsError",
+    "AccountDisabledError",
+    "EmailVerificationRequiredError",
+    "auth_service",
 ]
+

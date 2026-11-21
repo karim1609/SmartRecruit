@@ -77,6 +77,14 @@ services:
 
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
 
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: karimerradi.eng@gmail.com
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_STARTTLS: "true"
+      SMTP_USE_TLS: "false"
+      EMAILS_FROM_EMAIL: karimerradi.eng@gmail.com
+
       QDRANT_URL: http://qdrant:6333
       QDRANT_COLLECTION: candidates
       QDRANT_API_KEY: ${QDRANT_API_KEY}
@@ -93,9 +101,20 @@ services:
     depends_on:
       - mongodb
       - redis
+      - mailpit
       - qdrant
       - neo4j
 
+    networks:
+      - smartrecruit-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: smartrecruit-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
     networks:
       - smartrecruit-network
 
