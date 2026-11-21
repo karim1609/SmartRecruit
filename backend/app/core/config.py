@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "SmartRecruit API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    MAX_CV_FILE_SIZE_MB: int = 10
 
     # API
     API_PREFIX: str = ""
