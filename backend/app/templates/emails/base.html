@@ -83,12 +83,10 @@
 <body>
     <div class="wrapper">
         <div class="container">
-            <div class="header">
-                {% if logo_base64 %}
-                <img src="{{ logo_base64 }}" alt="SmartRecruit Logo" class="logo-img" />
-                {% endif %}
-                <div class="logo-text">SmartRecruit</div>
-                <div class="logo-subtitle">Intelligent Talent Acquisition Platform</div>
+            <div class="header" style="background-color: #0b192c; background: linear-gradient(135deg, #0b192c 0%, #1e3e62 100%); padding: 32px 36px; text-align: center;">
+                <img src="cid:smartrecruit_logo" alt="SmartRecruit Logo" width="56" height="56" class="logo-img" style="width: 56px; height: 56px; border-radius: 14px; display: inline-block; margin-bottom: 12px; border: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.25);" />
+                <div class="logo-text" style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin: 0; line-height: 1.2;">SmartRecruit</div>
+                <div class="logo-subtitle" style="color: #93c5fd; font-size: 13px; margin-top: 6px; font-weight: 500; letter-spacing: 0.2px;">Intelligent Talent Acquisition Platform</div>
             </div>
             <div class="content">
                 {% block content %}{% endblock %}

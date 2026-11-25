@@ -1,8 +1,10 @@
 import logging
 import os
 from datetime import datetime, timezone
+from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formatdate, make_msgid
 from typing import Any, Mapping
 
 import aiosmtplib
@@ -15,15 +17,15 @@ logger = logging.getLogger(__name__)
 # Base templates directory path
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
 
-# Load base64 logo if present
-LOGO_BASE64 = ""
-LOGO_PATH = os.path.join(TEMPLATES_DIR, "assets", "logo_base64.txt")
+# Load logo bytes if present
+LOGO_BYTES: bytes | None = None
+LOGO_PATH = os.path.join(TEMPLATES_DIR, "assets", "logo.png")
 if os.path.exists(LOGO_PATH):
     try:
-        with open(LOGO_PATH, "r") as f:
-            LOGO_BASE64 = f.read().strip()
+        with open(LOGO_PATH, "rb") as f:
+            LOGO_BYTES = f.read()
     except Exception as exc:
-        logger.warning("Could not read logo_base64.txt: %s", exc)
+        logger.warning("Could not read logo.png: %s", exc)
 
 
 class EmailServiceError(Exception):
@@ -46,7 +48,6 @@ class EmailService:
         template_context = dict(context)
         template_context.setdefault("current_year", datetime.now(timezone.utc).year)
         template_context.setdefault("app_name", settings.APP_NAME)
-        template_context.setdefault("logo_base64", LOGO_BASE64)
         template = self.jinja_env.get_template(template_name)
         return template.render(**template_context)
 
@@ -57,18 +58,31 @@ class EmailService:
         html_content: str,
         text_content: str | None = None,
     ) -> None:
-        """Send an HTML email asynchronously via SMTP (aiosmtplib)."""
-        message = MIMEMultipart("alternative")
+        """Send an HTML email asynchronously via SMTP (aiosmtplib) with inline CID logo and clean headers."""
+        message = MIMEMultipart("related")
+        message["MIME-Version"] = "1.0"
         message["Subject"] = subject
         message["From"] = f"{settings.EMAILS_FROM_NAME} <{settings.EMAILS_FROM_EMAIL}>"
         message["To"] = to_email
+        message["Reply-To"] = f"{settings.EMAILS_FROM_NAME} <{settings.EMAILS_FROM_EMAIL}>"
+        message["Date"] = formatdate(localtime=True)
 
-        # Attach fallback plain text if provided
+        # Create alternative part for plain text and HTML
+        alt_part = MIMEMultipart("alternative")
         if text_content:
-            message.attach(MIMEText(text_content, "plain", "utf-8"))
+            alt_part.attach(MIMEText(text_content, "plain", "utf-8"))
+        alt_part.attach(MIMEText(html_content, "html", "utf-8"))
+        message.attach(alt_part)
 
-        # Attach HTML body
-        message.attach(MIMEText(html_content, "html", "utf-8"))
+        # Attach inline logo if present
+        if LOGO_BYTES:
+            try:
+                logo_image = MIMEImage(LOGO_BYTES, _subtype="png")
+                logo_image.add_header("Content-ID", "<smartrecruit_logo>")
+                logo_image.add_header("Content-Disposition", "inline", filename="logo.png")
+                message.attach(logo_image)
+            except Exception as e:
+                logger.warning("Could not attach inline logo to email: %s", e)
 
         try:
             await aiosmtplib.send(
@@ -124,7 +138,7 @@ class EmailService:
         )
         await self.send_email(
             to_email=to_email,
-            subject=f"[{settings.APP_NAME}] Your Verification Code: {code}",
+            subject=f"Your {settings.APP_NAME} Verification Code",
             html_content=html,
             text_content=f"Hello {full_name},\nYour SmartRecruit verification code is: {code}\nThis code expires in {expire_minutes} minutes.",
         )
@@ -157,7 +171,7 @@ class EmailService:
         )
         await self.send_email(
             to_email=to_email,
-            subject=f"[{settings.APP_NAME}] Application Received: {job_title}",
+            subject=f"Application Received: {job_title} - {settings.APP_NAME}",
             html_content=html,
             text_content=plain_text,
         )

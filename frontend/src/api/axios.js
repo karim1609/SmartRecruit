@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Prefer relative base URL in production so requests go through the Nginx reverse proxy
+// Fall back to VITE_API_URL if explicitly defined, otherwise empty string (relative to current origin)
+const API_URL = import.meta.env.VITE_API_URL !== undefined ? import.meta.env.VITE_API_URL : ''
 
 const api = axios.create({
   baseURL: API_URL,
